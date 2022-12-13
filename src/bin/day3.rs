@@ -1,7 +1,7 @@
-use std::{error, fs, path, io};
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::io::BufRead;
+use std::{error, fs, io, path};
 
 fn priority(c: char) -> Result<usize, Box<dyn error::Error>> {
     let mut n: u32 = c.try_into()?;
@@ -14,8 +14,7 @@ fn priority(c: char) -> Result<usize, Box<dyn error::Error>> {
 }
 
 fn priorities(s: &str) -> Result<HashSet<usize>, Box<dyn error::Error>> {
-    Ok(s
-        .chars()
+    Ok(s.chars()
         .into_iter()
         .map(priority)
         .collect::<Result<Vec<usize>, Box<dyn error::Error>>>()?
@@ -36,10 +35,13 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     return Ok(0);
                 }
 
-                let (halfA, halfB) = (&line[..line.len()/2], &line[line.len()/2..]);
+                let (halfA, halfB) = (&line[..line.len() / 2], &line[line.len() / 2..]);
                 let (priA, priB) = (priorities(halfA)?, priorities(halfB)?);
                 let intersect: HashSet<usize> = priA.intersection(&priB).map(|n| *n).collect();
-                dbg!(intersect.into_iter().next().ok_or("Empty intersection".into()))
+                dbg!(intersect
+                    .into_iter()
+                    .next()
+                    .ok_or("Empty intersection".into()))
             })
             .collect::<Result<Vec<usize>, Box<dyn error::Error>>>()?
             .into_iter()
@@ -64,7 +66,10 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
                 let intersect: HashSet<usize> = pri1.intersection(&pri2).map(|n| *n).collect();
                 let intersect: HashSet<usize> = intersect.intersection(&pri3).map(|n| *n).collect();
-                dbg!(intersect.into_iter().next().ok_or("Empty intersection".into()))
+                dbg!(intersect
+                    .into_iter()
+                    .next()
+                    .ok_or("Empty intersection".into()))
             })
             .collect::<Result<Vec<usize>, Box<dyn error::Error>>>()?
             .into_iter()

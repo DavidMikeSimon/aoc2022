@@ -1,4 +1,10 @@
-use std::{error, fs, path, io::{self, BufRead}, convert::TryInto, collections::{HashSet, HashMap}, iter};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryInto,
+    error, fs,
+    io::{self, BufRead},
+    iter, path,
+};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct Point {
@@ -14,31 +20,35 @@ struct Cell {
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let file = fs::File::open(path::Path::new("./data/day12.txt"))?;
-    let mut start:  Option<Point> = None;
-    let mut end:  Option<Point> = None;
+    let mut start: Option<Point> = None;
+    let mut end: Option<Point> = None;
     let mut grid: Vec<Vec<Cell>> = io::BufReader::new(file)
         .lines()
         .map(|line| line.unwrap().trim().to_owned())
         .enumerate()
         .map(|(row, line)| {
-            line.chars().enumerate().map(|(col, c)| {
-                if c == 'S' {
-                    start = Some(Point { x: col, y: row });
-                }
-                if c == 'E' {
-                    end = Some(Point { x: col, y: row });
-                }
-                Cell {
-                    height: match c {
-                        'S' => 1usize,
-                        'E' => 26usize,
-                        _ => c.to_digit(36).unwrap() as usize - 10usize,
-                    },
-                    distance: 99999,
-                }
-            }).collect()
-        }).collect();
-    
+            line.chars()
+                .enumerate()
+                .map(|(col, c)| {
+                    if c == 'S' {
+                        start = Some(Point { x: col, y: row });
+                    }
+                    if c == 'E' {
+                        end = Some(Point { x: col, y: row });
+                    }
+                    Cell {
+                        height: match c {
+                            'S' => 1usize,
+                            'E' => 26usize,
+                            _ => c.to_digit(36).unwrap() as usize - 10usize,
+                        },
+                        distance: 99999,
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
     let start = start.ok_or("No start point")?;
     let end = end.ok_or("No end point")?;
 
@@ -56,7 +66,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 for (x_offset, y_offset) in offsets.iter() {
                     let tgt_x = x as isize + x_offset;
                     let tgt_y = y as isize + y_offset;
-                    if tgt_x < 0 || tgt_x >= grid[y].len() as isize || tgt_y < 0 || tgt_y >= grid.len() as isize  {
+                    if tgt_x < 0
+                        || tgt_x >= grid[y].len() as isize
+                        || tgt_y < 0
+                        || tgt_y >= grid.len() as isize
+                    {
                         continue;
                     }
 
@@ -67,7 +81,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     // if tgt_cell.height > cell.height+1 {
                     //     continue;
                     // }
-                    if cell.height == 0 || tgt_cell.height < cell.height-1 {
+                    if cell.height == 0 || tgt_cell.height < cell.height - 1 {
                         continue;
                     }
 
@@ -77,8 +91,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     }
 
                     distances_to_write
-                        .entry(Point{x: tgt_x, y: tgt_y})
-                        .and_modify(|d| *d = (new_dist).min(*d) )
+                        .entry(Point { x: tgt_x, y: tgt_y })
+                        .and_modify(|d| *d = (new_dist).min(*d))
                         .or_insert(new_dist);
                 }
             }
@@ -98,9 +112,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         }
     }
 
-    let m = &grid.iter().flat_map(|row|
-        row.iter().filter(|cell| cell.height == 0).map(|cell| cell.distance)
-    ).min();
+    let m = &grid
+        .iter()
+        .flat_map(|row| {
+            row.iter()
+                .filter(|cell| cell.height == 0)
+                .map(|cell| cell.distance)
+        })
+        .min();
     dbg!(m);
 
     Ok(())

@@ -1,4 +1,10 @@
-use std::{error, fs, path, io::{self, BufRead}, convert::TryInto, collections::HashSet, iter};
+use std::{
+    collections::HashSet,
+    convert::TryInto,
+    error, fs,
+    io::{self, BufRead},
+    iter, path,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct Point {
@@ -8,7 +14,7 @@ struct Point {
 
 impl Point {
     fn move_next_to(&mut self, other: &Point) {
-        if (self.x-other.x).abs() <= 1 && (self.y-other.y).abs() <= 1 {
+        if (self.x - other.x).abs() <= 1 && (self.y - other.y).abs() <= 1 {
             return;
         }
 
@@ -47,7 +53,7 @@ impl Point {
 }
 
 fn main() -> Result<(), Box<dyn error::Error>> {
-    let mut rope: Vec<Point> = iter::repeat(Point{x: 0, y: 0}).take(10).collect();
+    let mut rope: Vec<Point> = iter::repeat(Point { x: 0, y: 0 }).take(10).collect();
     let mut tail_positions: HashSet<Point> = HashSet::new();
     tail_positions.insert(*rope.last().unwrap());
 
@@ -68,14 +74,17 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             "R" => (1, 0),
             "U" => (0, -1),
             "D" => (0, 1),
-            _ => panic!("Unknown direction {}", direction)
+            _ => panic!("Unknown direction {}", direction),
         };
 
         for _ in 0..steps {
             let mut new_rope = rope.clone();
-            new_rope[0] = Point{x: rope[0].x + offset.0, y: rope[0].y + offset.1};
+            new_rope[0] = Point {
+                x: rope[0].x + offset.0,
+                y: rope[0].y + offset.1,
+            };
             for idx in 1..rope.len() {
-                let upstream = new_rope[idx-1];
+                let upstream = new_rope[idx - 1];
                 new_rope[idx].move_next_to(&upstream);
             }
 

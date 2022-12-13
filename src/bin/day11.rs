@@ -1,4 +1,10 @@
-use std::{error, fs, path, io::{self, BufRead}, convert::TryInto, collections::{HashSet, HashMap}, iter};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryInto,
+    error, fs,
+    io::{self, BufRead},
+    iter, path,
+};
 
 #[derive(Debug)]
 enum Op {
@@ -34,8 +40,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         let (_, true_tgt_str) = monkey_lines[4].split_at(25);
         let (_, false_tgt_str) = monkey_lines[5].split_at(26);
 
-        monkeys.push(Monkey{
-            items: items_str.split(", ").map(|s| s.parse().unwrap() ).collect(),
+        monkeys.push(Monkey {
+            items: items_str.split(", ").map(|s| s.parse().unwrap()).collect(),
             op: match op_str.chars().next().unwrap() {
                 '+' => Op::AddConstant(operand_str.parse().unwrap()),
                 '*' => {
@@ -44,7 +50,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     } else {
                         Op::MulConstant(operand_str.parse().unwrap())
                     }
-                },
+                }
                 _ => panic!("Unknown operation {}", op_str),
             },
             test_divisor: div_str.parse().unwrap(),
@@ -74,7 +80,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     } else {
                         monkey.false_tgt_idx
                     };
-                    move_targets.entry(target_idx)
+                    move_targets
+                        .entry(target_idx)
                         .and_modify(|v| v.push(new_value))
                         .or_insert_with(|| vec![new_value]);
                 }
@@ -85,7 +92,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             }
         }
     }
-    
+
     dbg!(&monkeys);
 
     Ok(())

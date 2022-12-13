@@ -1,6 +1,6 @@
-use std::{error, fs, path, io};
-use std::io::BufRead;
 use regex::Regex;
+use std::io::BufRead;
+use std::{error, fs, io, path};
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let re = Regex::new(r"(\d+)-(\d+),(\d+)-(\d+)").unwrap();
@@ -29,11 +29,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 dbg!((startB, endB));
 
                 // if startA <= startB && endA >= endB {
-                    // return dbg!(Ok(1));
+                // return dbg!(Ok(1));
                 // }
 
                 // if startB <= startA && endB >= endA {
-                    // return dbg!(Ok(1));
+                // return dbg!(Ok(1));
                 // }
 
                 if startA >= startB && startA <= endB {

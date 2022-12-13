@@ -1,4 +1,7 @@
-use std::{error, fs, collections::{VecDeque, HashSet}};
+use std::{
+    collections::{HashSet, VecDeque},
+    error, fs,
+};
 
 const PACKET_LEN: usize = 14;
 
@@ -13,7 +16,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             buf.pop_front();
             let set: HashSet<char> = buf.iter().copied().collect();
             if set.len() == PACKET_LEN {
-                dbg!(idx+1);
+                dbg!(idx + 1);
                 break;
             }
         }

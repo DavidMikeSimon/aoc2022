@@ -1,4 +1,9 @@
-use std::{error, fs, path, io::{self, BufRead}, convert::TryInto};
+use std::{
+    convert::TryInto,
+    error, fs,
+    io::{self, BufRead},
+    path,
+};
 
 #[derive(Debug)]
 struct Tree {
@@ -6,7 +11,10 @@ struct Tree {
     visible: bool,
 }
 
-fn apply_visible<'a, T>(iter: T) where T: Iterator<Item = &'a mut Tree> {
+fn apply_visible<'a, T>(iter: T)
+where
+    T: Iterator<Item = &'a mut Tree>,
+{
     let mut height: i32 = -1;
     for tree in iter {
         if tree.height > height {
@@ -18,9 +26,19 @@ fn apply_visible<'a, T>(iter: T) where T: Iterator<Item = &'a mut Tree> {
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let file = fs::File::open(path::Path::new("./data/day8.txt"))?;
-    let mut forest: Vec<Vec<Tree>> = io::BufReader::new(file).lines().map(|line| {
-        line.unwrap().trim().chars().map(|c| Tree{ height: c.to_digit(10).unwrap().try_into().unwrap(), visible: false }).collect()
-    }).collect();
+    let mut forest: Vec<Vec<Tree>> = io::BufReader::new(file)
+        .lines()
+        .map(|line| {
+            line.unwrap()
+                .trim()
+                .chars()
+                .map(|c| Tree {
+                    height: c.to_digit(10).unwrap().try_into().unwrap(),
+                    visible: false,
+                })
+                .collect()
+        })
+        .collect();
 
     for row in forest.iter_mut() {
         apply_visible(row.iter_mut());
@@ -28,11 +46,21 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     }
 
     for col_num in 0..forest.first().unwrap().len() {
-        apply_visible(forest.iter_mut().map(|row| row.iter_mut().nth(col_num).unwrap()));
-        apply_visible(forest.iter_mut().map(|row| row.iter_mut().nth(col_num).unwrap()).rev());
+        apply_visible(
+            forest
+                .iter_mut()
+                .map(|row| row.iter_mut().nth(col_num).unwrap()),
+        );
+        apply_visible(
+            forest
+                .iter_mut()
+                .map(|row| row.iter_mut().nth(col_num).unwrap())
+                .rev(),
+        );
     }
 
-    let visible_count: usize = forest.iter()
+    let visible_count: usize = forest
+        .iter()
         .map(|row| row.iter().filter(|tree| tree.visible).count())
         .sum();
     dbg!(visible_count);
@@ -50,7 +78,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 loop {
                     x += offset.0;
                     y += offset.1;
-                    if x >= 0 && x < forest[0].len().try_into().unwrap() && y >= 0 && y < forest.len().try_into().unwrap() {
+                    if x >= 0
+                        && x < forest[0].len().try_into().unwrap()
+                        && y >= 0
+                        && y < forest.len().try_into().unwrap()
+                    {
                         offset_score += 1;
                         if forest[y as usize][x as usize].height >= start_height {
                             break;
@@ -69,5 +101,5 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     dbg!(best_score);
 
-	Ok(())
+    Ok(())
 }

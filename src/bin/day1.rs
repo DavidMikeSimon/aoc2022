@@ -1,5 +1,5 @@
-use std::{fs, path};
 use std::io::{self, BufRead};
+use std::{fs, path};
 
 fn main() {
     let mut sums: Vec<usize> = Vec::new();
@@ -20,7 +20,7 @@ fn main() {
     sums.push(cur_sum);
 
     sums.sort();
-    let top_sums = &sums[(sums.len()-3)..];
+    let top_sums = &sums[(sums.len() - 3)..];
 
     println!("{:?}", top_sums.iter().sum::<usize>());
 }

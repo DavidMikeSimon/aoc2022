@@ -1,5 +1,5 @@
-use std::{fs, path, string};
 use std::io::{self, BufRead};
+use std::{fs, path, string};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Choice {
@@ -23,7 +23,7 @@ impl Choice {
             'A' => Some(Choice::Rock),
             'B' => Some(Choice::Paper),
             'C' => Some(Choice::Scissors),
-            _ => None
+            _ => None,
         }
     }
 
@@ -32,7 +32,7 @@ impl Choice {
             'X' => Some(Choice::Rock),
             'Y' => Some(Choice::Paper),
             'Z' => Some(Choice::Scissors),
-            _ => None
+            _ => None,
         }
     }
 
@@ -82,14 +82,15 @@ impl Outcome {
             'X' => Some(Outcome::Loss),
             'Y' => Some(Outcome::Tie),
             'Z' => Some(Outcome::Win),
-            _ => None
+            _ => None,
         }
     }
 
     fn my_choice_for_outcome(&self, them: &Choice) -> Choice {
-        *(CHOICES.iter().find(|&me| {
-            me.compare(them) == *self
-        }).unwrap())
+        *(CHOICES
+            .iter()
+            .find(|&me| me.compare(them) == *self)
+            .unwrap())
     }
 }
 

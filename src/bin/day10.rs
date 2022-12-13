@@ -1,4 +1,10 @@
-use std::{error, fs, path, io::{self, BufRead}, convert::TryInto, collections::HashSet, iter};
+use std::{
+    collections::HashSet,
+    convert::TryInto,
+    error, fs,
+    io::{self, BufRead},
+    iter, path,
+};
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let mut cycle = 0;
