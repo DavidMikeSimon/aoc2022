@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     packets.push(two.clone());
     packets.push(six.clone());
     packets.sort();
-    
+
     let (two_pos, _) = packets.iter().find_position(|&p| p == &two).unwrap();
     let (six_pos, _) = packets.iter().find_position(|&p| p == &six).unwrap();
     dbg!((two_pos + 1) * (six_pos + 1));
