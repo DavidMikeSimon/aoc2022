@@ -36,13 +36,15 @@ fn merge_range(row: &mut Vec<RangeInclusive<isize>>, range: &RangeInclusive<isiz
         .iter()
         .map(|r| r.start())
         .min()
-        .unwrap_or(range.start()).min(range.start());
+        .unwrap_or(range.start())
+        .min(range.start());
     let max = intersecting
         .iter()
         .map(|r| r.end())
         .max()
-        .unwrap_or(range.end()).max(range.end());
-    
+        .unwrap_or(range.end())
+        .max(range.end());
+
     if *min <= 0 && *max >= MAX_SEARCH {
         return false;
     }
