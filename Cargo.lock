@@ -17,6 +17,7 @@ version = "0.1.0"
 dependencies = [
  "itertools",
  "regex",
+ "rust-dense-bitset",
  "serde",
  "serde_json",
 ]
@@ -82,6 +83,12 @@ name = "regex-syntax"
 version = "0.6.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
+
+[[package]]
+name = "rust-dense-bitset"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32ce26bf673f429c3ed2f6cd59bf61df4a6e48300e5c36b15c355045111f3fbb"
 
 [[package]]
 name = "ryu"

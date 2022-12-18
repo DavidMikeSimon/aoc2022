@@ -13,7 +13,6 @@ use std::{
     iter,
     ops::RangeInclusive,
     path,
-    thread::current,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
