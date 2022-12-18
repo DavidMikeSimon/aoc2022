@@ -41,15 +41,19 @@ fn get_grid_height(grid: &Vec<DenseBitSet>) -> usize {
 }
 
 fn get_shape_width(shape: &Vec<DenseBitSet>) -> usize {
-    shape.iter().map(|row| {
-        let mut test_row = *row;
-        let mut n = 0;
-        while test_row.any() {
-            test_row >>= 1;
-            n += 1;
-        }
-        n
-    }).max().unwrap()
+    shape
+        .iter()
+        .map(|row| {
+            let mut test_row = *row;
+            let mut n = 0;
+            while test_row.any() {
+                test_row >>= 1;
+                n += 1;
+            }
+            n
+        })
+        .max()
+        .unwrap()
 }
 
 fn is_intersect(shape: &Vec<DenseBitSet>, x: usize, y: usize, grid: &Vec<DenseBitSet>) -> bool {
@@ -79,18 +83,52 @@ fn insert_shape(shape: &Vec<DenseBitSet>, x: usize, y: usize, grid: &mut Vec<Den
     }
 }
 
-fn display_grid(grid: &Vec<DenseBitSet>) {
-    for row in grid.iter().rev() {
-        let row_str = (0..7).rev().map(|i| match row.get_bit(i) {
+fn row_to_str(row: &DenseBitSet) -> String {
+    (0..7)
+        .rev()
+        .map(|i| match row.get_bit(i) {
             false => '.',
             true => '#',
-        }).join("");
-        println!("|{}|", &row_str);
+        })
+        .join("")
+}
+
+fn display_grid(grid: &Vec<DenseBitSet>) {
+    for row in grid.iter().rev() {
+        println!("|{}|", &row_to_str(row));
     }
     println!("---------");
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct Snapshot {
+    shape_idx_mod: usize,
+    push_idx_mod: usize,
+    top: Vec<DenseBitSet>,
+}
+
+fn display_snapshot(snapshot: &Snapshot) {
+    println!("--- SNAPSHOT ---");
+    println!(
+        "SHAPE IDX: {}      PUSH IDX: {}",
+        snapshot.shape_idx_mod, snapshot.push_idx_mod
+    );
+    for row in snapshot.top.iter() {
+        println!("|{}|", &row_to_str(row));
+    }
+    println!("---------");
+}
+
+#[derive(Debug)]
+struct TetrisStatus {
+    rock_idx: usize,
+    height: usize,
+}
+
 const ROCKS_TO_INSERT: usize = 1_000_000_000_000;
+// const ROCKS_TO_INSERT: usize = 1_000_000;
+
+const SNAPSHOT_HEIGHT: usize = 50;
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let pushes: Vec<Push> = fs::read_to_string(path::Path::new("./data/day17.txt"))?
@@ -102,6 +140,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             _ => panic!("Unknown character"),
         })
         .collect();
+    println!("PUSHES LEN {}", pushes.len());
 
     let shapes: Vec<Vec<DenseBitSet>> = vec![
         vec![DenseBitSet::from_string("1111", 2)],
@@ -130,11 +169,40 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     let mut grid: Vec<DenseBitSet> = Vec::new();
 
+    let mut snapshots: HashMap<Snapshot, TetrisStatus> = HashMap::new();
+
     let mut shape_idx = 0;
     let mut push_idx = 0;
-    for idx in 0..ROCKS_TO_INSERT {
-        if idx % 100000 == 0 {
-            println!("{}", (idx as f32)/(ROCKS_TO_INSERT as f32));
+    let mut looking_for_loop = true;
+    let mut skipped_height: usize = 0;
+    let mut rock_idx = 0;
+    while rock_idx < ROCKS_TO_INSERT {
+        if looking_for_loop && grid.len() >= SNAPSHOT_HEIGHT {
+            let snapshot = Snapshot {
+                shape_idx_mod: shape_idx % shapes.len(),
+                push_idx_mod: push_idx % pushes.len(),
+                top: grid.iter().rev().take(SNAPSHOT_HEIGHT).cloned().collect(),
+            };
+            let status = TetrisStatus {
+                rock_idx,
+                height: get_grid_height(&grid),
+            };
+            match snapshots.entry(snapshot) {
+                std::collections::hash_map::Entry::Occupied(e) => {
+                    println!("MATCH! cur {:?}, prior {:?}", status, e.get());
+                    // display_snapshot(e.key());
+                    let loop_length = status.rock_idx - e.get().rock_idx;
+                    let loop_height = status.height - e.get().height;
+                    let loops = (ROCKS_TO_INSERT - e.get().rock_idx)/loop_length - 1;
+                    dbg!(loops);
+                    rock_idx += loop_length * loops-1;
+                    skipped_height = loop_height * loops-1;
+                    looking_for_loop = false;
+                }
+                std::collections::hash_map::Entry::Vacant(e) => {
+                    e.insert(status);
+                }
+            }
         }
 
         let shape = &shapes[shape_idx % shapes.len()];
@@ -171,13 +239,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
         insert_shape(shape, x, y, &mut grid);
         shape_idx += 1;
+        rock_idx += 1;
 
         //println!();
         //println!();
         //display_grid(&grid);
     }
-    
-    dbg!(get_grid_height(&grid));
+
+    dbg!(get_grid_height(&grid) + skipped_height);
 
     Ok(())
 }
