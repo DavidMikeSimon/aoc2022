@@ -16,7 +16,6 @@ struct Blueprint {
     obsidian_robot_clay_cost: u16,
     geode_robot_ore_cost: u16,
     geode_robot_obsidian_cost: u16,
-    maximum_ore_cost: u16,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -110,13 +109,32 @@ impl State {
     }
 }
 
-fn find_maximum_geodes(state: &State, blueprint: &Blueprint, minutes_remaining: usize) -> usize {
+fn is_benefit_from_building_robot(
+    current_robots: u16,
+    maximum_useful_output: u16,
+    current_stockpile: u16,
+    minutes_remaining: u16,
+) -> bool {
+    if current_robots >= maximum_useful_output {
+        return false;
+    }
+
+    if current_stockpile + (current_robots * minutes_remaining)
+        >= maximum_useful_output * minutes_remaining
+    {
+        return false;
+    }
+
+    true
+}
+
+fn find_maximum_geodes(state: &State, blueprint: &Blueprint, minutes_remaining: u16) -> usize {
     if minutes_remaining == 0 {
         return state.open_geodes as usize;
     }
 
     let mut best_score: usize = 0;
-
+    let mut maximum_useful_ore_cost = 0;
     let state_after_wait = state.wait();
 
     if let Some(geode_robot_state) = state.build_geode_robot(&state_after_wait, blueprint) {
@@ -134,7 +152,14 @@ fn find_maximum_geodes(state: &State, blueprint: &Blueprint, minutes_remaining: 
         ));
     }
 
-    if (state.obsidian_robots as u16) < blueprint.geode_robot_obsidian_cost {
+    if is_benefit_from_building_robot(
+        state.obsidian_robots.into(),
+        blueprint.geode_robot_obsidian_cost,
+        state.obsidian,
+        minutes_remaining,
+    ) {
+        maximum_useful_ore_cost = maximum_useful_ore_cost.max(blueprint.obsidian_robot_ore_cost);
+
         if let Some(obsidian_robot_state) = state.build_obsidian_robot(&state_after_wait, blueprint)
         {
             best_score = best_score.max(find_maximum_geodes(
@@ -144,7 +169,14 @@ fn find_maximum_geodes(state: &State, blueprint: &Blueprint, minutes_remaining: 
             ));
         }
 
-        if (state.clay_robots as u16) < blueprint.obsidian_robot_clay_cost {
+        if is_benefit_from_building_robot(
+            state.clay_robots.into(),
+            blueprint.obsidian_robot_clay_cost,
+            state.clay,
+            minutes_remaining,
+        ) {
+            maximum_useful_ore_cost = maximum_useful_ore_cost.max(blueprint.clay_robot_ore_cost);
+
             if let Some(clay_robot_state) = state.build_clay_robot(&state_after_wait, blueprint) {
                 best_score = best_score.max(find_maximum_geodes(
                     &clay_robot_state,
@@ -155,7 +187,12 @@ fn find_maximum_geodes(state: &State, blueprint: &Blueprint, minutes_remaining: 
         }
     }
 
-    if (state.ore_robots as u16) < blueprint.maximum_ore_cost {
+    if is_benefit_from_building_robot(
+        state.ore_robots.into(),
+        maximum_useful_ore_cost,
+        state.ore,
+        minutes_remaining,
+    ) {
         if let Some(ore_robot_state) = state.build_ore_robot(&state_after_wait, blueprint) {
             best_score = best_score.max(find_maximum_geodes(
                 &ore_robot_state,
@@ -196,28 +233,24 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 obsidian_robot_clay_cost,
                 geode_robot_ore_cost,
                 geode_robot_obsidian_cost,
-                maximum_ore_cost: ore_robot_ore_cost
-                    .max(clay_robot_ore_cost)
-                    .max(obsidian_robot_ore_cost)
-                    .max(geode_robot_ore_cost),
             }
         })
         .collect();
 
-    let score: usize = blueprints
-        .par_iter()
-        .map(|blueprint| {
-            find_maximum_geodes(&State::new(), blueprint, 24) * (blueprint.id as usize)
-        })
-        .sum();
-
     // let score: usize = blueprints
     //     .par_iter()
-    //     .take(3)
     //     .map(|blueprint| {
-    //         find_maximum_geodes(&State::new(), blueprint, 32)
+    //         find_maximum_geodes(&State::new(), blueprint, 24) * (blueprint.id as usize)
     //     })
-    //     .product();
+    //     .sum();
+
+    let score: usize = blueprints
+        .par_iter()
+        .take(3)
+        .map(|blueprint| {
+            find_maximum_geodes(&State::new(), blueprint, 32)
+        })
+        .product();
 
     dbg!(score);
 
