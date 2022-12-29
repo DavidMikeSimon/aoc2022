@@ -193,10 +193,10 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     // display_snapshot(e.key());
                     let loop_length = status.rock_idx - e.get().rock_idx;
                     let loop_height = status.height - e.get().height;
-                    let loops = (ROCKS_TO_INSERT - e.get().rock_idx)/loop_length - 1;
+                    let loops = (ROCKS_TO_INSERT - e.get().rock_idx) / loop_length - 1;
                     dbg!(loops);
-                    rock_idx += loop_length * loops-1;
-                    skipped_height = loop_height * loops-1;
+                    rock_idx += loop_length * loops - 1;
+                    skipped_height = loop_height * loops - 1;
                     looking_for_loop = false;
                 }
                 std::collections::hash_map::Entry::Vacant(e) => {

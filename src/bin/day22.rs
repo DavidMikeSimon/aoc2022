@@ -172,13 +172,9 @@ impl State {
                         break;
                     }
                     Some(Spot::Wall) => return result,
-                    Some(Spot::Portal(c) | Spot::PortalStart(c)) => {
-                        (next_x, next_y, next_facing) = portal_teleport(
-                            (next_x, next_y),
-                            *tgt_spot.unwrap(),
-                            facing,
-                            map,
-                        );
+                    Some(Spot::Portal(_) | Spot::PortalStart(_)) => {
+                        (next_x, next_y, next_facing) =
+                            portal_teleport((next_x, next_y), *tgt_spot.unwrap(), facing, map);
                     }
                 }
             }
@@ -254,8 +250,8 @@ fn portal_teleport(
         }
     }
 
-    let (portal_start, portal_offset): ((isize, isize), usize) = match tgt_spot {
-        Spot::PortalStart(_) => (next_pos, 0),
+    let portal_offset: usize = match tgt_spot {
+        Spot::PortalStart(_) => 0,
         Spot::Portal(c) => match facing {
             Direction::Left | Direction::Right => {
                 let r = map
@@ -264,10 +260,7 @@ fn portal_teleport(
                     .enumerate()
                     .find(|(_, s)| s == &Some(&Spot::PortalStart(c)))
                     .unwrap();
-                (
-                    (next_pos.0, r.0 as isize),
-                    (next_pos.1 - (r.0 as isize)).abs() as usize,
-                )
+                (next_pos.1 - (r.0 as isize)).abs() as usize
             }
             Direction::Up | Direction::Down => {
                 let r = map
@@ -277,10 +270,7 @@ fn portal_teleport(
                     .enumerate()
                     .find(|(_, &s)| s == Spot::PortalStart(c))
                     .unwrap();
-                (
-                    (r.0 as isize, next_pos.1),
-                    (next_pos.0 - (r.0 as isize)).abs() as usize,
-                )
+                (next_pos.0 - (r.0 as isize)).abs() as usize
             }
         },
         _ => panic!("Cannot teleport through this"),
@@ -317,16 +307,13 @@ fn portal_teleport(
         let out_dir_pos = (out_portal_pos.0 + offset.0, out_portal_pos.1 + offset.1);
         let spot = map
             .get(out_dir_pos.1 as usize)
-            .map(|row| row.get(out_dir_pos.0 as usize)).unwrap_or(None);
+            .map(|row| row.get(out_dir_pos.0 as usize))
+            .unwrap_or(None);
         spot == Some(&Spot::Floor) || spot == Some(&Spot::Wall)
     })
     .unwrap();
 
-    (
-        out_portal_pos.0,
-        out_portal_pos.1,
-        *out_direction,
-    )
+    (out_portal_pos.0, out_portal_pos.1, *out_direction)
 }
 
 fn parse_map<'a>(lines: impl Iterator<Item = &'a String>) -> Vec<Vec<Spot>> {

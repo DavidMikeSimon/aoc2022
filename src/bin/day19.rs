@@ -247,9 +247,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let score: usize = blueprints
         .par_iter()
         .take(3)
-        .map(|blueprint| {
-            find_maximum_geodes(&State::new(), blueprint, 32)
-        })
+        .map(|blueprint| find_maximum_geodes(&State::new(), blueprint, 32))
         .product();
 
     dbg!(score);
