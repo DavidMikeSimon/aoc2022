@@ -10,7 +10,7 @@ use std::{
 
 use itertools::Itertools;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 enum Spot {
     Blank,
     Floor,
@@ -38,17 +38,17 @@ impl From<char> for Spot {
     }
 }
 
-// impl Debug for Spot {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Self::Blank => write!(f, " "),
-//             Self::Floor => write!(f, "."),
-//             Self::Wall => write!(f, "#"),
-//             Self::Portal(c) => write!(f, "{}", c),
-//             Self::PortalStart(c) => write!(f, "{}", c.to_ascii_lowercase()),
-//         }
-//     }
-// }
+impl Debug for Spot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Blank => write!(f, " "),
+            Self::Floor => write!(f, "."),
+            Self::Wall => write!(f, "#"),
+            Self::Portal(c) => write!(f, "{}", c),
+            Self::PortalStart(c) => write!(f, "{}", c.to_ascii_lowercase()),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum Instruction {
@@ -96,6 +96,15 @@ impl Direction {
             Direction::Right => (1, 0),
         }
     }
+
+    fn to_char(&self) -> char {
+        match self {
+            Direction::Up => '^',
+            Direction::Down => 'V',
+            Direction::Left => '<',
+            Direction::Right => '>',
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -135,15 +144,17 @@ impl State {
     }
 
     fn move_steps(self, steps: usize, facing: Direction, map: &Vec<Vec<Spot>>) -> Self {
-        let offset = facing.to_offset();
         let mut result = self;
 
-        for _ in 0..steps {
+        for i in 0..steps {
+            println!("STEP {} OF {}", i+1, steps);
+            let mut next_facing = result.facing;
             let mut next_x = result.x as isize;
             let mut next_y = result.y as isize;
             loop {
-                next_x += offset.0;
-                next_y += offset.1;
+                let next_offset = next_facing.to_offset();
+                next_x += next_offset.0;
+                next_y += next_offset.1;
 
                 let tgt_spot = map
                     .get(next_y as usize)
@@ -157,12 +168,12 @@ impl State {
                     Some(Spot::Floor) => {
                         result.x = next_x as usize;
                         result.y = next_y as usize;
+                        result.facing = next_facing;
                         break;
                     }
                     Some(Spot::Wall) => return result,
                     Some(Spot::Portal(c) | Spot::PortalStart(c)) => {
-                        result = portal_teleport(
-                            result,
+                        (next_x, next_y, next_facing) = portal_teleport(
                             (next_x, next_y),
                             *tgt_spot.unwrap(),
                             facing,
@@ -171,6 +182,8 @@ impl State {
                     }
                 }
             }
+            result.draw_map(map);
+            println!();
         }
 
         result
@@ -179,45 +192,141 @@ impl State {
     fn to_score(&self) -> usize {
         1000 * (self.y) + 4 * (self.x) + self.facing.to_score()
     }
+
+    fn draw_map(&self, map: &Vec<Vec<Spot>>) {
+        for (y, row) in map.iter().enumerate() {
+            for (x, spot) in row.iter().enumerate() {
+                if self.x == x && self.y == y {
+                    print!("{}", self.facing.to_char());
+                } else {
+                    print!("{:?}", spot);
+                }
+            }
+            println!();
+        }
+    }
 }
 
 fn portal_teleport(
-    state: State,
     next_pos: (isize, isize),
     tgt_spot: Spot,
     facing: Direction,
     map: &Vec<Vec<Spot>>,
-) -> State {
-    let (portal_start, portal_offset): ((isize, isize), usize) = match tgt_spot {
-        Spot::PortalStart(_) => (next_pos, 0),
-        Spot::Portal(c) => {
-            match facing {
-                Direction::Left | Direction::Right => {
-                    let r = map
-                        .iter()
-                        .map(|row| row.get(next_pos.0 as usize))
-                        .enumerate()
-                        .find(|(_, s)| s == &Some(&Spot::PortalStart(c)) )
-                        .unwrap();
-                    ((next_pos.0, r.0 as isize), (next_pos.1 - (r.0 as isize)).abs() as usize)
-                },
-                Direction::Up | Direction::Down => {
-                    let r = map
-                        .get(next_pos.1 as usize)
-                        .unwrap()
-                        .iter()
-                        .enumerate()
-                        .find(|(_, &s)| s == Spot::PortalStart(c) )
-                        .unwrap();
-                    ((r.0 as isize, next_pos.1), (next_pos.0 - (r.0 as isize)).abs() as usize)
-                }
+) -> (isize, isize, Direction) {
+    let c = match tgt_spot {
+        Spot::PortalStart(c) => c,
+        Spot::Portal(c) => c,
+        _ => panic!("Not a portal spot?"),
+    };
+
+    let mut portals: Vec<((isize, isize), (isize, isize))> = Vec::new();
+    for (y, row) in map.iter().enumerate() {
+        let portal_spots: Vec<_> = row
+            .iter()
+            .enumerate()
+            .filter(|(_, &s)| s == Spot::Portal(c) || s == Spot::PortalStart(c))
+            .collect();
+        if portal_spots.len() > 1 {
+            let (x_first, spot_first) = portal_spots.first().unwrap();
+            let (x_last, _) = portal_spots.last().unwrap();
+            if **spot_first == Spot::PortalStart(c) {
+                portals.push(((*x_first as isize, y as isize), (1, 0)));
+            } else {
+                portals.push(((*x_last as isize, y as isize), (-1, 0)));
             }
         }
+    }
+    for x in (0..map.first().unwrap().len()) {
+        let portal_spots: Vec<_> = map
+            .iter()
+            .map(|row| row.get(x).unwrap())
+            .enumerate()
+            .filter(|(_, &s)| s == Spot::Portal(c) || s == Spot::PortalStart(c))
+            .collect();
+        if portal_spots.len() > 1 {
+            let (y_first, spot_first) = portal_spots.first().unwrap();
+            let (y_last, _) = portal_spots.last().unwrap();
+            if **spot_first == Spot::PortalStart(c) {
+                portals.push(((x as isize, *y_first as isize), (0, 1)));
+            } else {
+                portals.push(((x as isize, *y_last as isize), (0, -1)));
+            }
+        }
+    }
+
+    let (portal_start, portal_offset): ((isize, isize), usize) = match tgt_spot {
+        Spot::PortalStart(_) => (next_pos, 0),
+        Spot::Portal(c) => match facing {
+            Direction::Left | Direction::Right => {
+                let r = map
+                    .iter()
+                    .map(|row| row.get(next_pos.0 as usize))
+                    .enumerate()
+                    .find(|(_, s)| s == &Some(&Spot::PortalStart(c)))
+                    .unwrap();
+                (
+                    (next_pos.0, r.0 as isize),
+                    (next_pos.1 - (r.0 as isize)).abs() as usize,
+                )
+            }
+            Direction::Up | Direction::Down => {
+                let r = map
+                    .get(next_pos.1 as usize)
+                    .unwrap()
+                    .iter()
+                    .enumerate()
+                    .find(|(_, &s)| s == Spot::PortalStart(c))
+                    .unwrap();
+                (
+                    (r.0 as isize, next_pos.1),
+                    (next_pos.0 - (r.0 as isize)).abs() as usize,
+                )
+            }
+        },
         _ => panic!("Cannot teleport through this"),
     };
 
-    panic!("Wat");
-    state
+    let (in_portal_idx, _) = portals
+        .iter()
+        .find_position(|(portal_start_pos, portal_offset)| {
+            (portal_start_pos.0 == next_pos.0 && portal_offset.0 == 0)
+                || (portal_start_pos.1 == next_pos.1 && portal_offset.1 == 0)
+        })
+        .unwrap();
+
+    let (_, out_portal) = portals
+        .iter()
+        .enumerate()
+        .find(|(idx, _)| *idx != in_portal_idx)
+        .unwrap();
+
+    let out_portal_pos: (isize, isize) = (
+        (out_portal.0).0 + (out_portal.1).0 * (portal_offset as isize),
+        (out_portal.0).1 + (out_portal.1).1 * (portal_offset as isize),
+    );
+
+    let out_direction = [
+        Direction::Up,
+        Direction::Down,
+        Direction::Left,
+        Direction::Right,
+    ]
+    .iter()
+    .find(|dir| {
+        let offset = dir.to_offset();
+        let out_dir_pos = (out_portal_pos.0 + offset.0, out_portal_pos.1 + offset.1);
+        let spot = map
+            .get(out_dir_pos.1 as usize)
+            .map(|row| row.get(out_dir_pos.0 as usize)).unwrap_or(None);
+        spot == Some(&Spot::Floor) || spot == Some(&Spot::Wall)
+    })
+    .unwrap();
+
+    (
+        out_portal_pos.0,
+        out_portal_pos.1,
+        *out_direction,
+    )
 }
 
 fn parse_map<'a>(lines: impl Iterator<Item = &'a String>) -> Vec<Vec<Spot>> {
@@ -271,8 +380,13 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let instructions = parse_instructions(lines.iter().last().unwrap());
 
     let mut state = State::start(&map);
+    state.draw_map(&map);
+    println!();
     for i in instructions {
+        println!("----------- {:?}", i);
         state = state.apply_instruction(i, &map);
+        state.draw_map(&map);
+        println!();
     }
 
     dbg!(&state);
