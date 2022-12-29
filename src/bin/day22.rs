@@ -147,7 +147,7 @@ impl State {
         let mut result = self;
 
         for i in 0..steps {
-            println!("STEP {} OF {}", i+1, steps);
+            // println!("STEP {} OF {}", i+1, steps);
             let mut next_facing = result.facing;
             let mut next_x = result.x as isize;
             let mut next_y = result.y as isize;
@@ -182,8 +182,8 @@ impl State {
                     }
                 }
             }
-            result.draw_map(map);
-            println!();
+            // result.draw_map(map);
+            // println!();
         }
 
         result
@@ -383,10 +383,10 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     state.draw_map(&map);
     println!();
     for i in instructions {
-        println!("----------- {:?}", i);
+        // println!("----------- {:?}", i);
         state = state.apply_instruction(i, &map);
-        state.draw_map(&map);
-        println!();
+        // state.draw_map(&map);
+        // println!();
     }
 
     dbg!(&state);
