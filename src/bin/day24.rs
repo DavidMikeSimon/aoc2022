@@ -1,8 +1,8 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     convert::TryInto,
     error,
-    fmt::{Debug, Write},
+    fmt::Debug,
     fs,
     io::{self, BufRead},
     iter,
@@ -10,7 +10,6 @@ use std::{
     path,
 };
 
-use itertools::Itertools;
 use lazy_static::lazy_static;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -56,7 +55,7 @@ const SOUTH: Offset = Offset { x: 0, y: 1 };
 const WEST: Offset = Offset { x: -1, y: 0 };
 
 lazy_static! {
-    static ref ALL_DIRECTIONS: Vec<Offset> = { vec![NORTH, EAST, SOUTH, WEST,] };
+    static ref ALL_DIRECTIONS: Vec<Offset> = vec![NORTH, EAST, SOUTH, WEST,];
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -86,6 +85,73 @@ impl Point {
             y: self.y.rem_euclid(height),
         }
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+struct FindPathResult {
+    steps: usize,
+    x_phase: u8,
+    y_phase: u8,
+}
+
+fn find_path(
+    start: (u8, u8, Point),
+    end: Point,
+    vert_blizzard_spots: &HashSet<(u8, Point)>,
+    horiz_blizzard_spots: &HashSet<(u8, Point)>,
+    max_x: u8,
+    max_y: u8,
+) -> Result<FindPathResult, Box<dyn error::Error>> {
+    let mut known_spots: HashSet<(u8, u8, Point)> = HashSet::new();
+    let mut next_spots: HashSet<(u8, u8, Point)> = HashSet::new();
+    let mut next_next_spots: HashSet<(u8, u8, Point)> = HashSet::new();
+    next_next_spots.insert(start);
+
+    let mut generations = 1;
+
+    while !next_next_spots.is_empty() {
+        dbg!(generations);
+        known_spots.extend(next_spots.drain());
+        std::mem::swap(&mut next_next_spots, &mut next_spots);
+
+        for &(x_phase, y_phase, point) in &next_spots {
+            let next_x_phase = (x_phase + 1) % (max_x + 1);
+            let next_y_phase = (y_phase + 1) % (max_y + 1);
+
+            for &dir in ALL_DIRECTIONS
+                .iter()
+                .chain(iter::once(&Offset { x: 0, y: 0 }))
+            {
+                let tgt = point.apply_offset(dir);
+
+                if tgt == end {
+                    return Ok(FindPathResult {
+                        steps: generations,
+                        x_phase: next_x_phase,
+                        y_phase: next_y_phase,
+                    });
+                }
+
+                if tgt.x < 0
+                    || tgt.x > max_x.try_into().unwrap()
+                    // Allow waiting in the start position, even if it's out of bounds in y
+                    || (tgt.y < 0 && !(point == start.2 && dir == Offset{x: 0, y: 0}))
+                    || (tgt.y > max_y.try_into().unwrap() && !(point == start.2 && dir == Offset{x: 0, y: 0}))
+                    || vert_blizzard_spots.contains(&(next_y_phase, tgt))
+                    || horiz_blizzard_spots.contains(&(next_x_phase, tgt))
+                    || known_spots.contains(&(next_x_phase, next_y_phase, tgt))
+                {
+                    continue;
+                }
+
+                next_next_spots.insert((next_x_phase, next_y_phase, tgt));
+            }
+        }
+
+        generations += 1;
+    }
+
+    Err("Unable to find exit".into())
 }
 
 fn main() -> Result<(), Box<dyn error::Error>> {
@@ -124,7 +190,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 .collect::<HashSet<_>>()
         })
         .collect();
-    
+
     let vert_blizzard_spots: HashSet<(u8, Point)> = raw_blizzards
         .iter()
         .filter(|(_, offset)| offset.is_vertical())
@@ -154,52 +220,45 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             })
         })
         .collect();
-    
-    let mut known_spots: HashSet<(u8, u8, Point)> = HashSet::new();
-    let mut next_spots: HashSet<(u8, u8, Point)> = HashSet::new();
-    let mut next_next_spots: HashSet<(u8, u8, Point)> = HashSet::new();
-    next_next_spots.insert((0, 0, Point { x: 0, y: -1 }));
 
-    let mut generations = 1;
+    let start_point = Point { x: 0, y: -1 };
+    let end_point = Point {
+        x: max_x as i32,
+        y: (max_y + 1) as i32,
+    };
 
-    while !next_next_spots.is_empty() {
-        println!("KNOWN SPOTS {}", known_spots.len());
-        println!("GEN {}", generations);
+    let s1 = find_path(
+        (0, 0, start_point),
+        end_point,
+        &vert_blizzard_spots,
+        &horiz_blizzard_spots,
+        max_x,
+        max_y,
+    )?;
+    dbg!(s1);
 
-        known_spots.extend(next_spots.drain());
-        std::mem::swap(&mut next_next_spots, &mut next_spots);
+    let s2 = find_path(
+        (s1.x_phase, s1.y_phase, end_point),
+        start_point,
+        &vert_blizzard_spots,
+        &horiz_blizzard_spots,
+        max_x,
+        max_y,
+    )?;
+    dbg!(s2);
 
-        println!("NEXT SPOTS {}", next_spots.len());
-        for &(x_phase, y_phase, point) in &next_spots {
-            if point == (Point { x: max_x as i32, y: max_y as i32 }) {
-                println!("Found exit in generation {}", generations);
-                return Ok(());
-            }
+    let s3 = find_path(
+        (s2.x_phase, s2.y_phase, start_point),
+        end_point,
+        &vert_blizzard_spots,
+        &horiz_blizzard_spots,
+        max_x,
+        max_y,
+    )?;
+    dbg!(s3);
 
-            let next_x_phase = (x_phase + 1) % (max_x + 1);
-            let next_y_phase = (y_phase + 1) % (max_y + 1);
+    let total = s1.steps + s2.steps + s3.steps;
+    println!("TOTAL: {}", total);
 
-            for &dir in ALL_DIRECTIONS.iter().chain(iter::once(&Offset{x: 0, y: 0})) {
-                let tgt = point.apply_offset(dir);
-
-                if tgt.x < 0
-                    || tgt.x > max_x.try_into().unwrap()
-                    // Allow waiting in the start position, even though it's out of bounds
-                    || (tgt.y < 0 && !(point == Point{x: 0, y: -1} && dir == Offset{x: 0, y: 0}))
-                    || tgt.y > max_y.try_into().unwrap()
-                    || vert_blizzard_spots.contains(&(next_y_phase, tgt))
-                    || horiz_blizzard_spots.contains(&(next_x_phase, tgt))
-                    || known_spots.contains(&(next_x_phase, next_y_phase, tgt))
-                {
-                    continue;
-                }
-
-                next_next_spots.insert((next_x_phase, next_y_phase, tgt));
-            }
-        }
-
-        generations += 1;
-    }
-
-    Err("Unable to find exit".into())
+    Ok(())
 }
